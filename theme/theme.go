@@ -6,9 +6,11 @@
 //  1. --theme flag (passed in by the binary)
 //  2. $TTYTHEME — family override for every companion pane
 //  3. $CLITHEME — proposed cross-tool standard (dark|light|auto)
-//  4. OSC 11 via Bubble Tea's RequestBackgroundColor (live terminal bg)
-//  5. $COLORFGBG — cheap, static, set by some terminals (rxvt, Konsole, iTerm)
-//  6. dark
+//  4. ~/.config/ttyzero/theme (or $XDG_CONFIG_HOME/ttyzero/theme) —
+//     written by ttythemer; same one-line THEME/BORDERS as the bus
+//  5. OSC 11 via Bubble Tea's RequestBackgroundColor (live terminal bg)
+//  6. $COLORFGBG — cheap, static, set by some terminals (rxvt, Konsole, iTerm)
+//  7. dark
 //
 // Named values for TTYTHEME and --theme:
 //
@@ -42,6 +44,7 @@ const (
 	EnvCLI        = "CLITHEME"
 	EnvFGBG       = "COLORFGBG"
 	EnvBorderless = "TTYBORDERLESS"
+	EnvFile       = "TTYTHEME_FILE"
 	Default       = "auto"
 	PaletteID     = "charm"
 )
@@ -115,7 +118,8 @@ func Parse(s string) Spec {
 	return Spec{Name: "auto", Polarity: "auto", Palette: PaletteID}
 }
 
-// FromEnv reads TTYTHEME, then CLITHEME. Empty means auto.
+// FromEnv reads TTYTHEME, then CLITHEME, then the ttyzero theme file.
+// Empty means auto.
 func FromEnv() Spec {
 	if v := os.Getenv(EnvTTY); v != "" {
 		return Parse(v)
@@ -123,21 +127,26 @@ func FromEnv() Spec {
 	if v := os.Getenv(EnvCLI); v != "" {
 		return Parse(v)
 	}
+	if s, ok := Load(); ok && s.HasSpec {
+		return s.Spec
+	}
 	return Parse(Default)
 }
 
-// Borderless is true when --borderless is set or $TTYBORDERLESS is
-// 1/true/yes. Shared by gitwing, peek, and buscope.
+// Borderless is true when --borderless is set, $TTYBORDERLESS is
+// 1/true/yes, or the theme file says BORDERS=0.
 func Borderless(flag bool) bool {
 	if flag {
 		return true
 	}
-	switch strings.ToLower(strings.TrimSpace(os.Getenv(EnvBorderless))) {
-	case "1", "true", "yes", "on":
-		return true
-	default:
-		return false
+	if v, ok := os.LookupEnv(EnvBorderless); ok && strings.TrimSpace(v) != "" {
+		on, parsed := parseOn(v)
+		return parsed && on
 	}
+	if s, ok := Load(); ok && s.HasBorders {
+		return s.Borderless
+	}
+	return false
 }
 
 // Resolve combines an explicit flag with the environment. The flag wins

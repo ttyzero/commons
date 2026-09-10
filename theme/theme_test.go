@@ -1,6 +1,14 @@
 package theme
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
+
+func isolateFile(t *testing.T) {
+	t.Helper()
+	t.Setenv(EnvFile, filepath.Join(t.TempDir(), "theme"))
+}
 
 func TestParseBus(t *testing.T) {
 	cmd, ok := ParseBus("THEME dark")
@@ -60,6 +68,7 @@ func TestCatalogRoundtrip(t *testing.T) {
 }
 
 func TestBorderless(t *testing.T) {
+	isolateFile(t)
 	t.Setenv(EnvBorderless, "")
 	if Borderless(false) {
 		t.Fatal("default")
@@ -141,6 +150,7 @@ func TestApplyOSC(t *testing.T) {
 }
 
 func TestResolveFlagWins(t *testing.T) {
+	isolateFile(t)
 	t.Setenv(EnvTTY, "light")
 	got := Resolve("dark")
 	if got.Polarity != "dark" {
@@ -153,6 +163,7 @@ func TestResolveFlagWins(t *testing.T) {
 }
 
 func TestFromEnvCLITHEME(t *testing.T) {
+	isolateFile(t)
 	t.Setenv(EnvTTY, "")
 	t.Setenv(EnvCLI, "light")
 	got := FromEnv()

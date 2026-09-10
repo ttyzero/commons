@@ -27,7 +27,13 @@ Catppuccin, Dracula, Nord, Gruvbox, Tokyo Night, Solarized, One Dark,
 Rosé Pine, Everforest, Kanagawa (each with a light variant where the
 upstream palette has one). `$TTYTHEME`, `$CLITHEME`, OSC 11,
 `$COLORFGBG`, `$TTYBORDERLESS` — see `theme` package docs. Switch live
-with [ttythemer](https://github.com/ttyzero/ttythemer).
+with [ttythemer](https://github.com/ttyzero/ttythemer), which also writes
+`~/.config/ttyzero/theme` (or `$XDG_CONFIG_HOME/ttyzero/theme`, override
+`$TTYTHEME_FILE`) so the next pane launch matches:
+
+```
+THEME nord BORDERS=1
+```
 
 ## License
 

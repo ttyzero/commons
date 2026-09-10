@@ -1,6 +1,9 @@
 package theme
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 const Channel = "theme"
 
@@ -72,6 +75,22 @@ func parseOn(s string) (on bool, ok bool) {
 	default:
 		return false, false
 	}
+}
+
+// Encode is the one-line command panes parse and ttythemer writes to disk.
+func Encode(spec Spec, borderless bool) string {
+	name := spec.Name
+	if name == "" {
+		name = spec.Polarity
+	}
+	if name == "" {
+		name = "auto"
+	}
+	b := 1
+	if borderless {
+		b = 0
+	}
+	return fmt.Sprintf("THEME %s BORDERS=%d", name, b)
 }
 
 // Apply mutates spec/palette/borderless from a bus command.
