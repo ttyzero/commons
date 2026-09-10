@@ -12,15 +12,22 @@
 //
 // Named values for TTYTHEME and --theme:
 //
-//	auto         follow the terminal (default)
-//	dark, light  force polarity; Charm palette
-//	charm        alias for auto
-//	charm-dark, charm-light
+//	auto, dark, light, charm, charm-dark, charm-light
+//	catppuccin (mocha), catppuccin-latte
+//	dracula
+//	nord, nord-light
+//	gruvbox, gruvbox-light
+//	tokyonight, tokyonight-day
+//	solarized, solarized-light
+//	onedark, onelight
+//	rosepine, rosepine-dawn
+//	everforest, everforest-light
+//	kanagawa, kanagawa-lotus
 //
 // Peek and buscope should honor the same $TTYTHEME so a tmux workspace
 // of companion panes stays visually one family. Do not paint a panel
 // background — the terminal's own theme shows through; we only tint
-// type, borders, and accents.
+// type, borders, and accents. Catalog() is the advertised set.
 package theme
 
 import (
@@ -28,8 +35,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"charm.land/lipgloss/v2"
 )
 
 const (
@@ -43,35 +48,71 @@ const (
 
 // Spec is a resolved theme request before the terminal has answered OSC 11.
 type Spec struct {
+	// Name is the wire name on the theme bus (nord, gruvbox-light, auto…).
+	Name string
 	// Polarity is "auto", "dark", or "light".
 	Polarity string
-	// Palette is a named color family. Currently only "charm".
+	// Palette is the family: charm, catppuccin, dracula, nord, …
 	Palette string
 }
 
-// Parse interprets a --theme / $TTYTHEME / $CLITHEME value.
+type named struct {
+	family, pol, wire string
+}
+
+var namedLooks = map[string]named{
+	"auto":             {PaletteID, "auto", "auto"},
+	"charm":            {PaletteID, "auto", "auto"},
+	"dark":             {PaletteID, "dark", "dark"},
+	"light":            {PaletteID, "light", "light"},
+	"charm-dark":       {PaletteID, "dark", "charm-dark"},
+	"charm-light":      {PaletteID, "light", "charm-light"},
+	"dracula":          {"dracula", "dark", "dracula"},
+	"nord":             {"nord", "dark", "nord"},
+	"nord-light":       {"nord", "light", "nord-light"},
+	"nord-snow":        {"nord", "light", "nord-light"},
+	"gruvbox":          {"gruvbox", "dark", "gruvbox"},
+	"gruvbox-dark":     {"gruvbox", "dark", "gruvbox"},
+	"gruvbox-light":    {"gruvbox", "light", "gruvbox-light"},
+	"catppuccin":       {"catppuccin", "dark", "catppuccin"},
+	"catppuccin-mocha": {"catppuccin", "dark", "catppuccin"},
+	"mocha":            {"catppuccin", "dark", "catppuccin"},
+	"catppuccin-latte": {"catppuccin", "light", "catppuccin-latte"},
+	"latte":            {"catppuccin", "light", "catppuccin-latte"},
+	"tokyonight":       {"tokyonight", "dark", "tokyonight"},
+	"tokyo":            {"tokyonight", "dark", "tokyonight"},
+	"tokyo-night":      {"tokyonight", "dark", "tokyonight"},
+	"tokyonight-day":   {"tokyonight", "light", "tokyonight-day"},
+	"solarized":        {"solarized", "dark", "solarized"},
+	"solarized-dark":   {"solarized", "dark", "solarized"},
+	"solarized-light":  {"solarized", "light", "solarized-light"},
+	"onedark":          {"onedark", "dark", "onedark"},
+	"one-dark":         {"onedark", "dark", "onedark"},
+	"onelight":         {"onedark", "light", "onelight"},
+	"one-light":        {"onedark", "light", "onelight"},
+	"rosepine":         {"rosepine", "dark", "rosepine"},
+	"rose-pine":        {"rosepine", "dark", "rosepine"},
+	"rosepine-dawn":    {"rosepine", "light", "rosepine-dawn"},
+	"rose-pine-dawn":   {"rosepine", "light", "rosepine-dawn"},
+	"everforest":       {"everforest", "dark", "everforest"},
+	"everforest-light": {"everforest", "light", "everforest-light"},
+	"kanagawa":         {"kanagawa", "dark", "kanagawa"},
+	"kanagawa-wave":    {"kanagawa", "dark", "kanagawa"},
+	"kanagawa-lotus":   {"kanagawa", "light", "kanagawa-lotus"},
+	"kanagawa-light":   {"kanagawa", "light", "kanagawa-lotus"},
+}
+
+// Parse interprets a --theme / $TTYTHEME / $CLITHEME / theme-bus value.
 func Parse(s string) Spec {
 	s = strings.TrimSpace(strings.ToLower(s))
 	if i := strings.IndexByte(s, ':'); i >= 0 {
 		// CLITHEME allows "dark:modifier"; ignore unknown modifiers.
 		s = s[:i]
 	}
-	spec := Spec{Polarity: "auto", Palette: PaletteID}
-	switch s {
-	case "", "auto", "charm":
-		return spec
-	case "dark", "light":
-		spec.Polarity = s
-		return spec
-	case "charm-dark":
-		spec.Polarity = "dark"
-		return spec
-	case "charm-light":
-		spec.Polarity = "light"
-		return spec
-	default:
-		return spec
+	if n, ok := namedLooks[s]; ok {
+		return Spec{Name: n.wire, Polarity: n.pol, Palette: n.family}
 	}
+	return Spec{Name: "auto", Polarity: "auto", Palette: PaletteID}
 }
 
 // FromEnv reads TTYTHEME, then CLITHEME. Empty means auto.
@@ -178,27 +219,24 @@ type Palette struct {
 	Heat [5]color.Color
 }
 
-// New builds the Charm palette for a polarity.
+// New builds the Charm palette for a polarity (tests and fallbacks).
 func New(dark bool) Palette {
-	ld := lipgloss.LightDark(dark)
-	return Palette{
-		Name:    PaletteID,
-		Dark:    dark,
-		Accent:  ld(lipgloss.Color("#D6409F"), lipgloss.Color("#FF5F87")),
-		Accent2: ld(lipgloss.Color("#5A56E0"), lipgloss.Color("#7571F9")),
-		Text:    ld(lipgloss.Color("#1A1A2E"), lipgloss.Color("#E8E8F0")),
-		Muted:   ld(lipgloss.Color("#6B6B80"), lipgloss.Color("#8B8BA3")),
-		Subtle:  ld(lipgloss.Color("#9A9AAE"), lipgloss.Color("#5C5C72")),
-		Success: ld(lipgloss.Color("#02BA84"), lipgloss.Color("#02BF87")),
-		Danger:  ld(lipgloss.Color("#D6406A"), lipgloss.Color("#FE5F86")),
-		Warn:    ld(lipgloss.Color("#C97800"), lipgloss.Color("#FFB86C")),
-		Border:  ld(lipgloss.Color("#5A56E0"), lipgloss.Color("#7571F9")),
-		Heat: [5]color.Color{
-			ld(lipgloss.Color("#E4E4EE"), lipgloss.Color("#2A2A38")),
-			ld(lipgloss.Color("#9BE9A8"), lipgloss.Color("#0D3B2E")),
-			ld(lipgloss.Color("#40C463"), lipgloss.Color("#1A6B45")),
-			ld(lipgloss.Color("#30A14E"), lipgloss.Color("#1FA86A")),
-			ld(lipgloss.Color("#02BA84"), lipgloss.Color("#02BF87")),
-		},
+	pol := "light"
+	if dark {
+		pol = "dark"
 	}
+	return For(Spec{Name: pol, Polarity: pol, Palette: PaletteID})
+}
+
+// For resolves a named spec to colors.
+func For(s Spec) Palette {
+	fam := s.Palette
+	if fam == "" {
+		fam = PaletteID
+	}
+	fn, ok := familyPalettes[fam]
+	if !ok {
+		fn = familyPalettes[PaletteID]
+	}
+	return fn(s.InitialDark())
 }

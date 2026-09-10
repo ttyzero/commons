@@ -22,6 +22,41 @@ func TestParseBus(t *testing.T) {
 	if _, ok := ParseBus("/tmp/foo.go:12"); ok {
 		t.Fatal("files payload must not parse as theme")
 	}
+	cmd, ok = ParseBus("THEME nord")
+	if !ok || cmd.Spec.Name != "nord" || cmd.Spec.Palette != "nord" {
+		t.Fatalf("nord %+v", cmd)
+	}
+}
+
+func TestForNamed(t *testing.T) {
+	p := For(Parse("dracula"))
+	if !p.Dark || p.Name != "dracula" {
+		t.Fatalf("%+v", p)
+	}
+	p = For(Parse("catppuccin-latte"))
+	if p.Dark || p.Name != "catppuccin" {
+		t.Fatalf("latte %+v", p)
+	}
+	p = For(Parse("kanagawa"))
+	if !p.Dark || p.Name != "kanagawa" {
+		t.Fatalf("kanagawa %+v", p)
+	}
+}
+
+func TestCatalogRoundtrip(t *testing.T) {
+	for _, e := range Catalog() {
+		got := Parse(e.Name)
+		if got.Name != e.Spec.Name || got.Palette != e.Spec.Palette || got.Polarity != e.Spec.Polarity {
+			t.Errorf("Parse(%q) = %+v, catalog %+v", e.Name, got, e.Spec)
+		}
+		p := For(e.Spec)
+		if p.Name == "" {
+			t.Errorf("empty palette for %q", e.Name)
+		}
+		if e.Name != "auto" && e.Spec.Polarity != "auto" && p.Dark != (e.Spec.Polarity == "dark") {
+			t.Errorf("%s polarity %s pal.Dark=%v", e.Name, e.Spec.Polarity, p.Dark)
+		}
+	}
 }
 
 func TestBorderless(t *testing.T) {
@@ -51,6 +86,17 @@ func TestParse(t *testing.T) {
 		{"charm-light", "light", "charm"},
 		{"dark:high-contrast", "dark", "charm"},
 		{"mystery", "auto", "charm"},
+		{"nord", "dark", "nord"},
+		{"latte", "light", "catppuccin"},
+		{"gruvbox-light", "light", "gruvbox"},
+		{"tokyonight", "dark", "tokyonight"},
+		{"dracula", "dark", "dracula"},
+		{"rosepine-dawn", "light", "rosepine"},
+		{"kanagawa", "dark", "kanagawa"},
+		{"kanagawa-lotus", "light", "kanagawa"},
+		{"mocha", "dark", "catppuccin"},
+		{"onedark", "dark", "onedark"},
+		{"solarized-light", "light", "solarized"},
 	}
 	for _, c := range cases {
 		got := Parse(c.in)

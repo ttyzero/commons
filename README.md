@@ -17,13 +17,17 @@ All three panes subscribe to ttybus channel `theme`:
 
 ```sh
 ttybus pub theme 'THEME dark'
-ttybus pub theme 'THEME light'
+ttybus pub theme 'THEME nord'
+ttybus pub theme 'THEME catppuccin BORDERS=0'
 ttybus pub theme 'BORDERS=0'
-ttybus pub theme 'THEME dark BORDERS=1'
 ```
 
-`$TTYTHEME`, `$CLITHEME`, OSC 11, `$COLORFGBG`, `$TTYBORDERLESS` — see
-`theme` package docs.
+Looks: `auto`, `dark`, `light` (Charm), then the ricing staples —
+Catppuccin, Dracula, Nord, Gruvbox, Tokyo Night, Solarized, One Dark,
+Rosé Pine, Everforest, Kanagawa (each with a light variant where the
+upstream palette has one). `$TTYTHEME`, `$CLITHEME`, OSC 11,
+`$COLORFGBG`, `$TTYBORDERLESS` — see `theme` package docs. Switch live
+with [ttythemer](https://github.com/ttyzero/ttythemer).
 
 ## License
 

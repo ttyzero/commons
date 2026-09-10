@@ -79,7 +79,7 @@ func parseOn(s string) (on bool, ok bool) {
 func Apply(cmd Command, spec *Spec, pal *Palette, borderless *bool) (osc bool) {
 	if cmd.Spec != nil {
 		*spec = *cmd.Spec
-		*pal = New(spec.InitialDark())
+		*pal = For(*spec)
 		osc = spec.Polarity == "auto"
 	}
 	if cmd.Borderless != nil {
